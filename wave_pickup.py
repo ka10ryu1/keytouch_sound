@@ -10,26 +10,25 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-from func import argsPrint, getFilePath
+from myfunc import argsPrint, getFilePath
 
 
 def command():
     parser = argparse.ArgumentParser(description=help)
     parser.add_argument('wav', nargs='+',
                         help='使用するWAVファイル')
+    parser.add_argument('-t', '--train_per_all', type=float, default=0.9,
+                        help='画像数に対する学習用画像の割合（default: 0.9）')
     return parser.parse_args()
 
 
 def wav2arr(file_name):
     wave_file = wave.open(file_name, "r")  # Open
-
     print('ch:', wave_file.getnchannels())  # モノラルorステレオ
     print('frame rate:', wave_file.getframerate())  # サンプリング周波数
     print('nframes:', wave_file.getnframes())  # フレームの総数
-
     x = wave_file.readframes(wave_file.getnframes())  # frameの読み込み
     x = np.frombuffer(x, dtype="int16")  # numpy.arrayに変換
-
     return x
 
 
@@ -46,28 +45,15 @@ def averageSampling(x, ave):
     return np.dot(x, b)
 
 
-def LPFilter(x, fc):
-    N = len(x)
-    # 高速フーリエ変換
-    F = np.fft.fft(x) / (N / 2)
-    # 周波数軸の値を計算
-    freq = np.fft.fftfreq(N)
-    # 直流成分の振幅を揃える
-    F[0] = F[0] / 2
-    # ローパス処理
-    F[(freq > fc)] = 0
-    F[(freq < 0)] = 0
-    # 高速逆フーリエ変換
-    return np.array(np.real(np.fft.ifft(F)) * (2 * N / 2), dtype=np.float32)
+def amplifier(x, thresh=0.2):
+    x[x > thresh] = thresh
+    return x / thresh
 
 
 def waveCut(x, width, height):
     wave = []
-    num = 0
     for i in range(len(x)):
         if(x.item(i) > height):
-            print(i - num)
-            num = i
             wave.append(x[i:i + width].copy())
             x[i:i + width] = 0
 
@@ -77,6 +63,7 @@ def waveCut(x, width, height):
 def savePNG(save_folder, wave_list, fs=(0.5, 0.5),
             ylim=[0, 1], lw=0.4, dpi=200, infla_size=5):
 
+    print('save png...')
     for i, elem in enumerate(wave_list):
         fig = plt.figure(figsize=fs)
         ax = fig.add_subplot(1, 1, 1)
@@ -84,34 +71,61 @@ def savePNG(save_folder, wave_list, fs=(0.5, 0.5),
         ax.set_yticklabels([])
         ax.plot(elem, linewidth=lw)
         ax.set_ylim(ylim[0], ylim[1])
-
         plt.savefig(getFilePath(save_folder, str(i).zfill(2), '.png'), dpi=dpi)
         plt.close()
 
 
-def saveNPZ(save_folder, wave_list):
-    np.savez(getFilePath(save_folder, 'wave', ''), wave=np.array(wave_list))
+def saveNPZ(save_folder, wave_list, train_per_all):
+    shuffle = np.random.permutation(range(len(wave_list)))
+    train_size = int(len(wave_list) * train_per_all)
+    wave = np.array(wave_list)
+
+    key_num = 9
+    key_list = list(range(1, key_num + 1)) * int(len(wave_list) // key_num)
+    key = np.array(key_list)
+    print(wave.shape, key.shape)
+    train_x = wave[shuffle[:train_size]]
+    train_y = key[shuffle[:train_size]]
+    test_x = wave[shuffle[train_size:]]
+    test_y = key[shuffle[train_size:]]
+    print('train x/y:{0}/{1}'.format(train_x.shape, train_y.shape))
+    print('test  x/y:{0}/{1}'.format(test_x.shape, test_y.shape))
+
+    print('save npz...')
+    np.savez(getFilePath(save_folder, 'train', ''),
+             x=np.array(train_x),
+             y=np.array(train_y),
+             )
+    np.savez(getFilePath(save_folder, 'test', ''),
+             x=np.array(test_x),
+             y=np.array(test_y),
+             )
 
 
-def show(waves):
+def waveAugmentation(wave, num):
+    noized = []
+    for i in range(num):
+        wave_len = wave[0].shape[0]
+        noized.extend([w + np.random.uniform(-0.1, 0.1, wave_len) for w in wave])
+
+    return noized
+
+
+def show(x, y):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    for w in waves:
-        ax.plot(w)
-
+    [ax.plot(x, w) for w in y]
     plt.show()
 
 
 def main(args):
     wave = [wav2arr(w) for w in args.wav]
-    x = averageSampling(norm(wave[0]), 50)
-    x[x > 0.20] = 0.2
-    x = x * 5
-    wave = waveCut(x, 300, 0.7)
-
-    savePNG('./result/png', wave)
-    saveNPZ('./result/', wave)
-    show([wave[0]])
+    x = amplifier(averageSampling(norm(wave[0]), 120))
+    wave = waveCut(x, 100, 0.6)
+    wave = waveAugmentation(wave, 100)
+    #savePNG('./result/png', wave)
+    saveNPZ('./result/', wave, args.train_per_all)
+    show(range(len(wave[0])), wave[:3])
 
 
 if __name__ == '__main__':

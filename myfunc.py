@@ -15,6 +15,7 @@ except ImportError:
     print('not import cupy')
 
 import chainer.functions as F
+import chainer.optimizers as O
 
 
 def argsPrint(p, bar=30):
@@ -166,6 +167,7 @@ def getLossfun(lossfun_str):
             fileFuncLine(), lossfun_str, lossfun.__name__)
         )
 
+    print('Loss func:', lossfun.__name__)
     return lossfun
 
 
@@ -185,14 +187,44 @@ def getActfun(actfun_str):
     elif(actfun_str.lower() == 'tanh'):
         actfun = F.hard_sigmoid
     elif(actfun_str.lower() == 's_plus'):
-        actfun = F.soft_plus
+        actfun = F.softplus
     else:
         actfun = F.relu
-        print('\n[Warning] {1}\n\t{0}->{1}'.format(
+        print('\n[Warning] {0}\n\t{1}->{2}\n'.format(
             fileFuncLine(), actfun_str, actfun.__name__)
         )
 
+    print('Activation func:', actfun.__name__)
     return actfun
+
+
+def getOptimizer(opt_str):
+    if(opt_str.lower() == 'adam'):
+        opt = O.Adam()
+    elif(opt_str.lower() == 'ada_d'):
+        opt = O.AdaDelta()
+    elif(opt_str.lower() == 'ada_g'):
+        opt = O.AdaGrad()
+    elif(opt_str.lower() == 'm_sgd'):
+        opt = O.MomentumSGD()
+    elif(opt_str.lower() == 'n_ag'):
+        opt = O.NesterovAG()
+    elif(opt_str.lower() == 'rmsp'):
+        opt = O.RMSprop()
+    elif(opt_str.lower() == 'rmsp_g'):
+        opt = O.RMSpropGraves()
+    elif(opt_str.lower() == 'sgd'):
+        opt = O.SGD()
+    elif(opt_str.lower() == 'smorms'):
+        opt = O.SMORMS3()
+    else:
+        opt = O.Adam()
+        print('\n[Warning] {0}\n\t{1}->{2}\n'.format(
+            fileFuncLine(), opt_str, opt.__doc__.split('.')[0])
+        )
+
+    print('Optimizer:', opt.__doc__.split('.')[0])
+    return opt
 
 
 def getFilePath(folder, name, ext):
@@ -203,9 +235,14 @@ def getFilePath(folder, name, ext):
 
 
 def fileFuncLine():
+    """
+    この関数を呼び出すと、呼び出し先のファイル名、関数名、実行行数を取得できる
+    デバッグ時に便利
+    """
+
     funcname = inspect.currentframe().f_back.f_code.co_name
     filename = os.path.basename(
         inspect.currentframe().f_back.f_code.co_filename
     )
     lineno = inspect.currentframe().f_back.f_lineno
-    return '{0}, {1}(), {2}line'.format(filename, funcname, lineno)
+    return '>>> {0}, {1}(), {2}[line] <<<\n'.format(filename, funcname, lineno)
