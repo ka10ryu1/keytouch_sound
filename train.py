@@ -17,8 +17,8 @@ from chainer.training import extensions
 from chainer.datasets import tuple_dataset
 
 
-from network import KBT, BPTTUpdater
-import myfunc as M
+from Lib.network import KBT, BPTTUpdater
+import Lib.myfunc as M
 
 
 def command():
