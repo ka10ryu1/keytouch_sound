@@ -39,6 +39,7 @@ class KBT(Chain):
         ))
 
     def __call__(self, x):
+        self.reset_state()
         h = self.l1(x)
         h = self.l2(h)
         y = self.l3(h)

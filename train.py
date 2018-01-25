@@ -18,7 +18,8 @@ from chainer.datasets import tuple_dataset
 
 
 from Lib.network import KBT, BPTTUpdater
-import Lib.myfunc as M
+import Lib.wavefunc as M
+import Tools.func as F
 
 
 def command():
@@ -186,7 +187,7 @@ def main(args):
 
     if args.only_check is False:
         # predict.pyでモデルのパラメータを読み込むjson形式で保存する
-        with open(M.getFilePath(args.out_path, exec_time, '.json'), 'w') as f:
+        with open(F.getFilePath(args.out_path, exec_time, '.json'), 'w') as f:
             json.dump(model_param, f)
 
         # Run the training
@@ -196,7 +197,7 @@ def main(args):
         # スナップショットを使ってもいいが、
         # スナップショットはファイルサイズが大きいので
         chainer.serializers.save_npz(
-            M.getFilePath(args.out_path, exec_time, '.model'),
+            F.getFilePath(args.out_path, exec_time, '.model'),
             model
         )
 
@@ -206,5 +207,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = command()
-    M.argsPrint(args)
+    F.argsPrint(args)
     main(args)

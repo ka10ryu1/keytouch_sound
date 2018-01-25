@@ -3,129 +3,114 @@
 #
 help = 'WAVファイルを読み込み、ランダムに推論実行テストを実行する'
 #
-
-import wave
+import os
 import argparse
 import numpy as np
 
-import matplotlib.pyplot as plt
+import chainer
+import chainer.links as L
+from chainer.cuda import to_cpu
 
-from Lib.myfunc import argsPrint, getFilePath
+from Lib.network import KBT
+
+from Tools.func import argsPrint, fileFuncLine
+import Lib.wavefunc as W
 
 
 def command():
     parser = argparse.ArgumentParser(description=help)
-    parser.add_argument('wav', nargs='+',
+    parser.add_argument('model',
+                        help='使用する学習済みモデル')
+    parser.add_argument('wav',
                         help='使用するWAVファイル')
     parser.add_argument('-t', '--train_per_all', type=float, default=0.9,
                         help='画像数に対する学習用画像の割合（default: 0.9）')
+    parser.add_argument('-af', '--actfun', default='sigmoid',
+                        help='活性化関数 (default: sigmoid, other: relu, elu, c_relu, l_relu, h_sigmoid, tanh, s_plus)')
+    parser.add_argument('-u', '--unit', type=int, default=64,
+                        help='ネットワークのユニット数 (default: 64)')
+    parser.add_argument('-ln', '--layer_num', type=int, default=3,
+                        help='ネットワーク層の数 (default: 3)')
+    parser.add_argument('-n', '--test_num', type=int, default=30,
+                        help='試行回数ネットワークのユニット数 (default: 30)')
     return parser.parse_args()
 
 
-def wav2arr(file_name):
-    wave_file = wave.open(file_name, "r")  # Open
-    print('ch:', wave_file.getnchannels())  # モノラルorステレオ
-    print('frame rate:', wave_file.getframerate())  # サンプリング周波数
-    print('nframes:', wave_file.getnframes())  # フレームの総数
-    x = wave_file.readframes(wave_file.getnframes())  # frameの読み込み
-    x = np.frombuffer(x, dtype="int16")  # numpy.arrayに変換
-    return x
+def npfloat32(x):
+    return np.asarray(x, dtype=np.float32)
 
 
-def norm(x, val=2**15):
-    return np.abs(x / 2**15)
+def npint32(x):
+    return np.asarray(x, dtype=np.int32)
 
 
-def averageSampling(x, ave):
-    out_size = x.shape[0] // ave
-    in_size = out_size * ave
-    print('sampling: {0} -> {1}'.format(in_size, out_size))
-    x = np.array(x[:in_size]).reshape(-1, ave)
-    b = np.ones(ave) / ave
-    return np.dot(x, b)
+def checkModelType(path):
+    """
+    入力されたパスが.modelか.snapshotかそれ以外か判定し、
+    load_npzのpathを設定する
+    [in]  path:      入力されたパス
+    [out] load_path: load_npzのpath
+    """
 
+    # 拡張子を正とする
+    name, ext = os.path.splitext(os.path.basename(path))
+    load_path = ''
+    if(ext == '.model'):
+        print('model read')
+    elif(ext == '.snapshot'):
+        print('snapshot read')
+        load_path = 'updater/model:main/'
+    else:
+        print('model read error')
+        print(W.fileFuncLine())
+        exit()
 
-def amplifier(x, thresh=0.2):
-    x[x > thresh] = thresh
-    return x / thresh
-
-
-def waveCut(x, width, height):
-    wave = []
-    for i in range(len(x)):
-        if(x.item(i) > height):
-            wave.append(x[i:i + width].copy())
-            x[i:i + width] = 0
-
-    return wave
-
-
-def savePNG(save_folder, wave_list, fs=(0.5, 0.5),
-            ylim=[0, 1], lw=0.4, dpi=200, infla_size=5):
-
-    print('save png...')
-    for i, elem in enumerate(wave_list):
-        fig = plt.figure(figsize=fs)
-        ax = fig.add_subplot(1, 1, 1)
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.plot(elem, linewidth=lw)
-        ax.set_ylim(ylim[0], ylim[1])
-        plt.savefig(getFilePath(save_folder, str(i).zfill(2), '.png'), dpi=dpi)
-        plt.close()
-
-
-def saveNPZ(save_folder, wave_list, train_per_all):
-    shuffle = np.random.permutation(range(len(wave_list)))
-    train_size = int(len(wave_list) * train_per_all)
-    wave = np.array(wave_list)
-
-    key_num = 9
-    key_list = list(range(1, key_num + 1)) * int(len(wave_list) // key_num)
-    key = np.array(key_list)
-    print(wave.shape, key.shape)
-    train_x = wave[shuffle[:train_size]]
-    train_y = key[shuffle[:train_size]]
-    test_x = wave[shuffle[train_size:]]
-    test_y = key[shuffle[train_size:]]
-    print('train x/y:{0}/{1}'.format(train_x.shape, train_y.shape))
-    print('test  x/y:{0}/{1}'.format(test_x.shape, test_y.shape))
-
-    print('save npz...')
-    np.savez(getFilePath(save_folder, 'train', ''),
-             x=np.array(train_x),
-             y=np.array(train_y),
-             )
-    np.savez(getFilePath(save_folder, 'test', ''),
-             x=np.array(test_x),
-             y=np.array(test_y),
-             )
-
-
-def waveAugmentation(wave, num):
-    noized = []
-    for i in range(num):
-        wave_len = wave[0].shape[0]
-        noized.extend([w + np.random.uniform(-0.1, 0.1, wave_len) for w in wave])
-
-    return noized
-
-
-def show(x, y):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    [ax.plot(x, w) for w in y]
-    plt.show()
+    return load_path
 
 
 def main(args):
-    wave = [wav2arr(w) for w in args.wav]
-    x = amplifier(averageSampling(norm(wave[0]), 120))
-    wave = waveCut(x, 100, 0.6)
-    wave = waveAugmentation(wave, 100)
-    #savePNG('./result/png', wave)
-    saveNPZ('./result/', wave, args.train_per_all)
-    show(range(len(wave[0])), wave[:3])
+    wave = W.wav2arr(args.wav)
+    x = W.amplifier(W.averageSampling(W.norm(wave), 120))
+    wave = W.waveCut(x, 100, 0.6)
+    x = npfloat32(wave)
+    key_num = 9
+    key_list = list(range(1, key_num + 1)) * int(len(wave) // key_num)
+    key = npint32(key_list)
+    print(x.shape, key.shape)
+
+    # 活性化関数を取得する
+    actfun = W.getActfun(args.actfun)
+    # モデルを決定する
+    model = L.Classifier(
+        KBT(n_in=1, n_unit=args.unit, layer=args.layer_num, actfun=actfun),
+    )
+    # load_npzのpath情報を取得する
+    load_path = checkModelType(args.model)
+    # 学習済みモデルの読み込み
+    try:
+        chainer.serializers.load_npz(args.model, model, path=load_path)
+    except:
+        import traceback
+        traceback.print_exc()
+        print(fileFuncLine())
+        exit()
+
+    cnt = 0
+    for i in range(args.test_num):
+        label = np.random.randint(0, len(x))
+        xx = np.array(x[label]).reshape(1, -1)
+        y = model.predictor(xx)
+        y = to_cpu(y.array)
+        rslt = 'X'
+        if(key[label] == y.argmax(axis=1)[0]):
+            rslt = 'O'
+            cnt += 1
+
+        print('ans={0}, predict={1}, result={2}'.format(
+            key[label], y.argmax(axis=1)[0], rslt)
+        )
+
+    print('Total Result:{0:5.2f}'.format(cnt / args.test_num))
 
 
 if __name__ == '__main__':

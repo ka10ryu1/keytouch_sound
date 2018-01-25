@@ -4,22 +4,17 @@
 help = 'WAVファイルを処理する'
 #
 
+import os
+import sys
 import wave
-import argparse
 import numpy as np
 
+import chainer.functions as F
+import chainer.optimizers as O
 import matplotlib.pyplot as plt
 
-from Lib.myfunc import argsPrint, getFilePath
-
-
-def command():
-    parser = argparse.ArgumentParser(description=help)
-    parser.add_argument('wav', nargs='+',
-                        help='使用するWAVファイル')
-    parser.add_argument('-t', '--train_per_all', type=float, default=0.9,
-                        help='画像数に対する学習用画像の割合（default: 0.9）')
-    return parser.parse_args()
+[sys.path.append(d) for d in ['../Tools/'] if os.path.isdir(d)]
+from Tools.func import getFilePath, fileFuncLine
 
 
 def wav2arr(file_name):
@@ -71,7 +66,8 @@ def savePNG(save_folder, wave_list, fs=(0.5, 0.5),
         ax.set_yticklabels([])
         ax.plot(elem, linewidth=lw)
         ax.set_ylim(ylim[0], ylim[1])
-        plt.savefig(getFilePath(save_folder, str(i).zfill(2), '.png'), dpi=dpi)
+        file_path = getFilePath(save_folder, 'png', str(i).zfill(2), '.png')
+        plt.savefig(file_path, dpi=dpi)
         plt.close()
 
 
@@ -111,24 +107,57 @@ def waveAugmentation(wave, num):
     return noized
 
 
-def show(x, y):
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    [ax.plot(x, w) for w in y]
-    plt.show()
+def getActfun(actfun_str):
+    if(actfun_str.lower() == 'relu'):
+        actfun = F.relu
+    elif(actfun_str.lower() == 'elu'):
+        actfun = F.elu
+    elif(actfun_str.lower() == 'c_relu'):
+        actfun = F.clipped_relu
+    elif(actfun_str.lower() == 'l_relu'):
+        actfun = F.leaky_relu
+    elif(actfun_str.lower() == 'sigmoid'):
+        actfun = F.sigmoid
+    elif(actfun_str.lower() == 'h_sigmoid'):
+        actfun = F.hard_sigmoid
+    elif(actfun_str.lower() == 'tanh'):
+        actfun = F.hard_sigmoid
+    elif(actfun_str.lower() == 's_plus'):
+        actfun = F.softplus
+    else:
+        actfun = F.relu
+        print('\n[Warning] {0}\n\t{1}->{2}\n'.format(
+            fileFuncLine(), actfun_str, actfun.__name__)
+        )
+
+    print('Activation func:', actfun.__name__)
+    return actfun
 
 
-def main(args):
-    wave = [wav2arr(w) for w in args.wav]
-    x = amplifier(averageSampling(norm(wave[0]), 120))
-    wave = waveCut(x, 100, 0.6)
-    wave = waveAugmentation(wave, 100)
-    #savePNG('./result/png', wave)
-    saveNPZ('./result/', wave, args.train_per_all)
-    show(range(len(wave[0])), wave[:3])
+def getOptimizer(opt_str):
+    if(opt_str.lower() == 'adam'):
+        opt = O.Adam()
+    elif(opt_str.lower() == 'ada_d'):
+        opt = O.AdaDelta()
+    elif(opt_str.lower() == 'ada_g'):
+        opt = O.AdaGrad()
+    elif(opt_str.lower() == 'm_sgd'):
+        opt = O.MomentumSGD()
+    elif(opt_str.lower() == 'n_ag'):
+        opt = O.NesterovAG()
+    elif(opt_str.lower() == 'rmsp'):
+        opt = O.RMSprop()
+    elif(opt_str.lower() == 'rmsp_g'):
+        opt = O.RMSpropGraves()
+    elif(opt_str.lower() == 'sgd'):
+        opt = O.SGD()
+    elif(opt_str.lower() == 'smorms'):
+        opt = O.SMORMS3()
+    else:
+        opt = O.Adam()
+        print('\n[Warning] {0}\n\t{1}->{2}\n'.format(
+            fileFuncLine(), opt_str, opt.__doc__.split('.')[0])
+        )
 
-
-if __name__ == '__main__':
-    args = command()
-    argsPrint(args)
-    main(args)
+    print('Optimizer:', opt.__doc__.split('.')[0])
+    return opt
