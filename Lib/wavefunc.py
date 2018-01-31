@@ -66,7 +66,8 @@ def savePNG(save_folder, wave_list, fs=(0.5, 0.5),
         ax.set_yticklabels([])
         ax.plot(elem, linewidth=lw)
         ax.set_ylim(ylim[0], ylim[1])
-        file_path = getFilePath(save_folder, 'png', str(i).zfill(2), '.png')
+        f = os.path.join(save_folder, 'png')
+        file_path = getFilePath(f, str(i).zfill(2), '.png')
         plt.savefig(file_path, dpi=dpi)
         plt.close()
 

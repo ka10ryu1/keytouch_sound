@@ -4,13 +4,10 @@
 help = 'WAVファイルを読み込み、NPZファイルとして保存する'
 #
 
-import wave
 import argparse
-import numpy as np
-
 import matplotlib.pyplot as plt
 
-from Tools.func import argsPrint, getFilePath
+from Tools.func import argsPrint
 import Lib.wavefunc as W
 
 
@@ -39,6 +36,8 @@ def show(x, y):
 def main(args):
     wave = [W.wav2arr(w) for w in args.wav]
     x = W.amplifier(W.averageSampling(W.norm(wave[0]), 120))
+    print(x.shape)
+    show(range(len(x)), [x])
     wave = W.waveCut(x, 100, 0.6)
     wave = W.waveAugmentation(wave, args.augmentation)
 

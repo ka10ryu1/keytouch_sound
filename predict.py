@@ -110,7 +110,7 @@ def main(args):
             key[label], y.argmax(axis=1)[0], rslt)
         )
 
-    print('Total Result:{0:5.2f}'.format(cnt / args.test_num))
+    print('Total Result:{0:5.2f}%'.format(cnt / args.test_num * 100))
 
 
 if __name__ == '__main__':
