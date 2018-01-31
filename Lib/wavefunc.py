@@ -49,7 +49,7 @@ def waveCut(x, width, height):
     wave = []
     for i in range(len(x)):
         if(x.item(i) > height):
-            wave.append(x[i:i + width].copy())
+            wave.append((list(range(i, i+width)), x[i:i + width].copy()))
             x[i:i + width] = 0
 
     return wave
@@ -101,9 +101,9 @@ def saveNPZ(save_folder, wave_list, train_per_all):
 
 def waveAugmentation(wave, num):
     noized = []
+    wave_len = len(wave[1][1])
     for i in range(num):
-        wave_len = wave[0].shape[0]
-        noized.extend([w + np.random.uniform(-0.1, 0.1, wave_len) for w in wave])
+        noized.extend([(i, j + np.random.uniform(-0.1, 0.1, wave_len)) for i, j in wave])
 
     return noized
 

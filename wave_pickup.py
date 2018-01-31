@@ -26,26 +26,25 @@ def command():
     return parser.parse_args()
 
 
-def show(x, y):
+def show(wave):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    [ax.plot(x, w) for w in y]
+    [ax.plot(x, y) for x, y in wave]
     plt.show()
 
 
 def main(args):
     wave = [W.wav2arr(w) for w in args.wav]
     x = W.amplifier(W.averageSampling(W.norm(wave[0]), 120))
-    print(x.shape)
-    show(range(len(x)), [x])
-    wave = W.waveCut(x, 100, 0.6)
+    x = x[int(len(x)*0.05):int(len(x)*0.95)]
+    wave = W.waveCut(x, 105, 0.6)
     wave = W.waveAugmentation(wave, args.augmentation)
 
     if args.save_png:
         W.savePNG(args.out_path, wave)
 
     W.saveNPZ(args.out_path, wave, args.train_per_all)
-    show(range(len(wave[0])), wave[:3])
+    show(wave)
 
 
 if __name__ == '__main__':
