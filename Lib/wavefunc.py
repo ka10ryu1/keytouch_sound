@@ -18,12 +18,12 @@ from Tools.func import getFilePath, fileFuncLine
 
 
 def wav2arr(file_name):
-    wave_file = wave.open(file_name, "r")  # Open
+    wave_file = wave.open(file_name, 'r')  # Open
     print('ch:', wave_file.getnchannels())  # モノラルorステレオ
     print('frame rate:', wave_file.getframerate())  # サンプリング周波数
     print('nframes:', wave_file.getnframes())  # フレームの総数
     x = wave_file.readframes(wave_file.getnframes())  # frameの読み込み
-    x = np.frombuffer(x, dtype="int16")  # numpy.arrayに変換
+    x = np.frombuffer(x, dtype=np.int16)  # numpy.arrayに変換
     return x
 
 
@@ -45,14 +45,16 @@ def amplifier(x, thresh=0.2):
     return x / thresh
 
 
-def waveCut(x, width, height):
-    wave = []
-    for i in range(len(x)):
-        if(x.item(i) > height):
-            wave.append((list(range(i, i+width)), x[i:i + width].copy()))
-            x[i:i + width] = 0
+def waveCut(w, width, height):
+    x = []
+    y = []
+    for i in range(len(w)):
+        if(w.item(i) > height):
+            x.append(list(range(i, i+width)))
+            y.append(w[i:i + width].copy())
+            w[i:i + width] = 0
 
-    return wave
+    return x, y
 
 
 def savePNG(save_folder, wave_list, fs=(0.5, 0.5),

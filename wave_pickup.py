@@ -5,6 +5,7 @@ help = 'WAVファイルを読み込み、NPZファイルとして保存する'
 #
 
 import argparse
+import numpy as np
 import matplotlib.pyplot as plt
 
 from Tools.func import argsPrint
@@ -17,8 +18,8 @@ def command():
                         help='使用するWAVファイル')
     parser.add_argument('-t', '--train_per_all', type=float, default=0.9,
                         help='画像数に対する学習用画像の割合（default: 0.9）')
-    parser.add_argument('-a', '--augmentation', type=int, default=100,
-                        help='データ増幅倍率 (default: 100)')
+    parser.add_argument('-a', '--augmentation', type=int, default=1,
+                        help='データ増幅倍率 (default: 1)')
     parser.add_argument('--save_png', action='store_true',
                         help='波形をPNG形式で保存（処理が重いので注意）')
     parser.add_argument('-o', '--out_path', default='./result/',
@@ -35,16 +36,25 @@ def show(wave):
 
 def main(args):
     wave = [W.wav2arr(w) for w in args.wav]
-    x = W.amplifier(W.averageSampling(W.norm(wave[0]), 120))
-    x = x[int(len(x)*0.05):int(len(x)*0.95)]
-    wave = W.waveCut(x, 105, 0.6)
-    wave = W.waveAugmentation(wave, args.augmentation)
+    out_x = []
+    out_y = []
+    for w in wave:
+        x = W.amplifier(W.averageSampling(W.norm(w), 120))
+        x = x[int(len(x)*0.01):int(len(x)*0.99)]
+        x, y = W.waveCut(x, 105, 0.6)
+        out_x.append(x)
+        out_y.append(y)
+        print('wave num:', len(x))
+
+    wave = W.waveAugmentation((out_x, out_y), args.augmentation)
 
     if args.save_png:
         W.savePNG(args.out_path, wave)
 
-    W.saveNPZ(args.out_path, wave, args.train_per_all)
-    show(wave)
+    if len(wave) % 9 == 0:
+        W.saveNPZ(args.out_path, wave, args.train_per_all)
+
+    show(out[1])
 
 
 if __name__ == '__main__':

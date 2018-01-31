@@ -70,13 +70,13 @@ def getWaveData(folder):
             pass
         elif 'train.npz' in l:
             np_arr = np.load(os.path.join(folder, l))
-            x, y = np_arr['x'], np_arr['y']
+            x, y = np_arr['x'][:, 1, :], np_arr['y']
             print('train (x/y): {0}/{1}'.format(x.shape, y.shape))
             train = tuple_dataset.TupleDataset(npfloat32(x), npint32(y))
             bprop_len = x.shape[1]
         elif 'test.npz' in l:
             np_arr = np.load(os.path.join(folder, l))
-            x, y = np_arr['x'], np_arr['y']
+            x, y = np_arr['x'][:, 1, :], np_arr['y']
             print('test (x/y): {0}/{1}'.format(x.shape, y.shape))
             test = tuple_dataset.TupleDataset(npfloat32(x), npint32(y))
 
