@@ -45,12 +45,12 @@ def amplifier(x, thresh=0.2):
     return x / thresh
 
 
-def waveCut(w, width, height):
+def waveCut(w, width, height, offset=0):
     x = []
     y = []
     for i in range(len(w)):
         if(w.item(i) > height):
-            x.append(list(range(i, i+width)))
+            x.append(list(range(i+offset, i+width+offset)))
             y.append(w[i:i + width].copy())
             w[i:i + width] = 0
 
@@ -101,11 +101,12 @@ def saveNPZ(save_folder, wave_list, train_per_all):
              )
 
 
-def waveAugmentation(wave, num):
+def waveAugmentation(x, y, num):
     noized = []
-    wave_len = len(wave[1][1])
+    wave_len = len(x[0])
     for i in range(num):
-        noized.extend([(i, j + np.random.uniform(-0.1, 0.1, wave_len)) for i, j in wave])
+        noized.extend([(i, j + np.random.uniform(-0.1, 0.1, wave_len))
+                       for i, j in zip(x, y)])
 
     return noized
 

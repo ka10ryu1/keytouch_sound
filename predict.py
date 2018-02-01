@@ -71,9 +71,9 @@ def checkModelType(path):
 def main(args):
     wave = W.wav2arr(args.wav)
     x = W.amplifier(W.averageSampling(W.norm(wave), 120))
-    x = x[int(len(x)*0.02):int(len(x)*0.98)]
-    x = W.waveCut(x, 105, 0.6)
-    x = npfloat32([j for i, j in x])
+    x = x[int(len(x)*0.01):int(len(x)*0.99)]
+    x, y = W.waveCut(x, 105, 0.6)
+    x = npfloat32(x)
     key_num = 9
     key_list = list(range(1, key_num + 1)) * int(len(wave) // key_num)
     key = npint32(key_list)

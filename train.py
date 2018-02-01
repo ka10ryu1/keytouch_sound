@@ -154,15 +154,17 @@ def main(args):
     trainer.extend(extensions.LogReport(log_name=exec_time + '.log'))
 
     # Save two plot images to the result dir
-    # if args.plot and extensions.PlotReport.available():
-    #     # trainer.extend(
-    #     #     extensions.PlotReport(['main/loss', 'validation/main/loss'],
-    #     #                           'epoch', file_name=exec_time + '_plot.png')
-    #     # )
-    #     trainer.extend(
-    #         PlotReportLog(['main/loss', 'validation/main/loss'],
-    #                       'epoch', file_name=exec_time + '_log_plot.png')
-    #     )
+    if args.plot and extensions.PlotReport.available():
+        trainer.extend(
+            extensions.PlotReport(
+                ['main/loss', 'validation/main/loss', 'main/accuracy', 'validation/main/accuracy'],
+                'epoch',
+                file_name=exec_time + '_plot.png')
+        )
+        # trainer.extend(
+        #     PlotReportLog(['main/loss', 'validation/main/loss'],
+        #                   'epoch', file_name=exec_time + '_log_plot.png')
+        # )
 
     # Print selected entries of the log to stdout
     # Here "main" refers to the target link of the "main" optimizer again, and
