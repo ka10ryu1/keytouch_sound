@@ -40,8 +40,8 @@ def command():
                         help='ドロップアウトの割合 (default: 0.7)')
     parser.add_argument('-b', '--batchsize', type=int, default=10,
                         help='ミニバッチサイズ (default: 10)')
-    parser.add_argument('-e', '--epoch', type=int, default=1000,
-                        help='学習のエポック数 (default 1000)')
+    parser.add_argument('-e', '--epoch', type=int, default=200,
+                        help='学習のエポック数 (default 200)')
     parser.add_argument('-f', '--frequency', type=int, default=-1,
                         help='スナップショット周期 (default: -1)')
     parser.add_argument('-g', '--gpu_id', type=int, default=-1,
@@ -162,10 +162,15 @@ def main(args):
                 'epoch',
                 file_name=exec_time + '_plot.png')
         )
-        # trainer.extend(
-        #     PlotReportLog(['main/loss', 'validation/main/loss'],
-        #                   'epoch', file_name=exec_time + '_log_plot.png')
-        # )
+        trainer.extend(
+            extensions.PlotReport(['main/loss', 'validation/main/loss'],
+                                  'epoch', file_name='loss.png')
+        )
+
+        trainer.extend(
+            extensions.PlotReport(['main/accuracy', 'validation/main/accuracy'],
+                                  'epoch', file_name='acc.png')
+        )
 
     # Print selected entries of the log to stdout
     # Here "main" refers to the target link of the "main" optimizer again, and
@@ -193,19 +198,16 @@ def main(args):
         with open(F.getFilePath(args.out_path, exec_time, '.json'), 'w') as f:
             json.dump(model_param, f)
 
-        # Run the training
-        trainer.run()
+    # Run the training
+    trainer.run()
 
-        # 最後にモデルを保存する
-        # スナップショットを使ってもいいが、
-        # スナップショットはファイルサイズが大きいので
-        chainer.serializers.save_npz(
-            F.getFilePath(args.out_path, exec_time, '.model'),
-            model
-        )
-
-    else:
-        print('Check Finish:', exec_time)
+    # 最後にモデルを保存する
+    # スナップショットを使ってもいいが、
+    # スナップショットはファイルサイズが大きいので
+    chainer.serializers.save_npz(
+        F.getFilePath(args.out_path, exec_time, '.model'),
+        model
+    )
 
 
 if __name__ == '__main__':
