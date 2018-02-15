@@ -34,12 +34,12 @@ def command():
                         help='オプティマイザ (default: adam, other: ada_d, ada_g, m_sgd, n_ag, rmsp, rmsp_g, sgd, smorms)')
     parser.add_argument('-ln', '--layer_num', type=int, default=3,
                         help='ネットワーク層の数 (default: 3)')
-    parser.add_argument('-u', '--unit', type=int, default=64,
-                        help='ネットワークのユニット数 (default: 64)')
+    parser.add_argument('-u', '--unit', type=int, default=128,
+                        help='ネットワークのユニット数 (default: 128)')
     parser.add_argument('-b', '--batchsize', type=int, default=10,
                         help='ミニバッチサイズ (default: 10)')
-    parser.add_argument('-e', '--epoch', type=int, default=50,
-                        help='学習のエポック数 (default 50)')
+    parser.add_argument('-e', '--epoch', type=int, default=1000,
+                        help='学習のエポック数 (default 1000)')
     parser.add_argument('-f', '--frequency', type=int, default=-1,
                         help='スナップショット周期 (default: -1)')
     parser.add_argument('-g', '--gpu_id', type=int, default=-1,
@@ -70,13 +70,13 @@ def getWaveData(folder):
             pass
         elif 'train.npz' in l:
             np_arr = np.load(os.path.join(folder, l))
-            x, y = np_arr['x'][:, 1, :], np_arr['y']
+            x, y = np_arr['x'], np_arr['y']
             print('train (x/y): {0}/{1}'.format(x.shape, y.shape))
             train = tuple_dataset.TupleDataset(npfloat32(x), npint32(y))
             bprop_len = x.shape[1]
         elif 'test.npz' in l:
             np_arr = np.load(os.path.join(folder, l))
-            x, y = np_arr['x'][:, 1, :], np_arr['y']
+            x, y = np_arr['x'], np_arr['y']
             print('test (x/y): {0}/{1}'.format(x.shape, y.shape))
             test = tuple_dataset.TupleDataset(npfloat32(x), npint32(y))
 

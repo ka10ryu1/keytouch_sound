@@ -4,7 +4,6 @@
 help = 'jpegcompのネットワーク部分'
 #
 
-import numpy as np
 import chainer
 import chainer.functions as F
 import chainer.links as L
@@ -14,7 +13,7 @@ from chainer import Chain
 
 class KBT(Chain):
     def __init__(self, n_in=1, n_unit=128, n_out=10,
-                 layer=3, actfun=F.sigmoid, use_dropout=True):
+                 layer=3, actfun=F.sigmoid, dropout=1.0):
         """
         [in] n_unit: 中間層のユニット数
         [in] n_out:  出力チャンネル
@@ -24,15 +23,11 @@ class KBT(Chain):
 
         super(KBT, self).__init__()
         with self.init_scope():
-            # self.lstm = L.NStepLSTM(n_layers=layer, in_size=n_in,
-            #                         out_size=n_unit, dropout=use_dropout)
             self.l1 = L.LSTM(None, n_unit)
             self.l2 = L.LSTM(None, n_unit)
             self.l3 = L.Linear(None, n_out)
 
-        # for param in self.params():
-        #     param.data[...] = np.random.uniform(-0.1, 0.1, param.data.shape)
-
+        self.ratio = dropout
         print('[Network info]')
         print('  Unit:\t{0}\n  Out:\t{1}\n  Layer:\t{2}\n  Act Func:\t{3}'.format(
             n_unit, n_out, layer, actfun.__name__
@@ -40,8 +35,8 @@ class KBT(Chain):
 
     def __call__(self, x):
         self.reset_state()
-        h = self.l1(x)
-        h = self.l2(h)
+        h = F.dropout(self.l1(x), self.ratio)
+        h = F.dropout(self.l2(h), self.ratio)
         y = self.l3(h)
         return y
 

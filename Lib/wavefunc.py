@@ -74,41 +74,45 @@ def savePNG(save_folder, wave_list, fs=(0.5, 0.5),
         plt.close()
 
 
-def saveNPZ(save_folder, wave_list, train_per_all):
-    shuffle = np.random.permutation(range(len(wave_list)))
-    train_size = int(len(wave_list) * train_per_all)
-    wave = np.array(wave_list)
+def saveNPZ(save_folder, train, test):
+    print('save npz...')
+    print(train['x'].shape, test['x'].shape)
+    print(train['y'].shape, test['y'].shape)
+    np.savez(getFilePath(save_folder, 'train', ''),
+             x=np.array(train['x']),
+             y=np.array(train['y']),
+             )
+    np.savez(getFilePath(save_folder, 'test', ''),
+             x=np.array(test['x']),
+             y=np.array(test['y']),
+             )
 
+
+def waveAugmentation(y, num, train_per_all):
+    wave = np.array(y)
+    train_size = int(len(wave) * train_per_all)
     key_num = 9
-    key_list = list(range(1, key_num + 1)) * int(len(wave_list) // key_num)
+    key_list = list(range(1, key_num + 1)) * int(len(wave) // key_num)
     key = np.array(key_list)
-    print(wave.shape, key.shape)
-    train_x = wave[shuffle[:train_size]]
-    train_y = key[shuffle[:train_size]]
+    shuffle = np.random.permutation(range(len(wave)))
+    buf_x = wave[shuffle[:train_size]]
+    buf_y = key[shuffle[:train_size]]
     test_x = wave[shuffle[train_size:]]
     test_y = key[shuffle[train_size:]]
+
+    wave_len = len(y[0])
+    train_x = []
+    train_y = []
+    for i in range(num):
+        train_x.extend([i + np.random.uniform(-0.1, 0.1, wave_len) for i in buf_x])
+        train_y.extend(buf_y)
+
+    train_x = np.array(train_x)
+    train_y = np.array(train_y)
     print('train x/y:{0}/{1}'.format(train_x.shape, train_y.shape))
     print('test  x/y:{0}/{1}'.format(test_x.shape, test_y.shape))
 
-    print('save npz...')
-    np.savez(getFilePath(save_folder, 'train', ''),
-             x=np.array(train_x),
-             y=np.array(train_y),
-             )
-    np.savez(getFilePath(save_folder, 'test', ''),
-             x=np.array(test_x),
-             y=np.array(test_y),
-             )
-
-
-def waveAugmentation(x, y, num):
-    noized = []
-    wave_len = len(x[0])
-    for i in range(num):
-        noized.extend([(i, j + np.random.uniform(-0.1, 0.1, wave_len))
-                       for i, j in zip(x, y)])
-
-    return noized
+    return {'x': train_x, 'y': train_y}, {'x': test_x, 'y': test_y}
 
 
 def getActfun(actfun_str):

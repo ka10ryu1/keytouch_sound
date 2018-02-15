@@ -27,8 +27,8 @@ def command():
                         help='画像数に対する学習用画像の割合（default: 0.9）')
     parser.add_argument('-af', '--actfun', default='sigmoid',
                         help='活性化関数 (default: sigmoid, other: relu, elu, c_relu, l_relu, h_sigmoid, tanh, s_plus)')
-    parser.add_argument('-u', '--unit', type=int, default=64,
-                        help='ネットワークのユニット数 (default: 64)')
+    parser.add_argument('-u', '--unit', type=int, default=128,
+                        help='ネットワークのユニット数 (default: 128)')
     parser.add_argument('-ln', '--layer_num', type=int, default=3,
                         help='ネットワーク層の数 (default: 3)')
     parser.add_argument('-n', '--test_num', type=int, default=30,
