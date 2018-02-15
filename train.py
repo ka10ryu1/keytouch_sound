@@ -36,6 +36,8 @@ def command():
                         help='ネットワーク層の数 (default: 3)')
     parser.add_argument('-u', '--unit', type=int, default=128,
                         help='ネットワークのユニット数 (default: 128)')
+    parser.add_argument('-d', '--dropout', type=float, default=0.7,
+                        help='ドロップアウトの割合 (default: 0.7)')
     parser.add_argument('-b', '--batchsize', type=int, default=10,
                         help='ミニバッチサイズ (default: 10)')
     parser.add_argument('-e', '--epoch', type=int, default=1000,
@@ -87,7 +89,9 @@ def main(args):
 
     # 各種データをユニークな名前で保存するために時刻情報を取得する
     now = datetime.today()
-    exec_time = now.strftime('%y%m%d-%H%M%S')
+    exec_time1 = int(now.strftime('%y%m%d'))
+    exec_time2 = int(now.strftime('%H%M%S'))
+    exec_time = np.base_repr(exec_time1 * exec_time2, 32).lower()
 
     # Set up a neural network to train
     # Classifier reports softmax cross entropy loss and accuracy at every
@@ -97,12 +101,9 @@ def main(args):
     actfun = M.getActfun(args.actfun)
     # モデルを決定する
     model = L.Classifier(
-        KBT(n_in=1, n_unit=args.unit, layer=args.layer_num, actfun=actfun),
-        # lossfun=M.getLossfun(args.lossfun)
+        KBT(n_in=1, n_unit=args.unit, layer=args.layer_num,
+            actfun=actfun, dropout=args.dropout),
     )
-    # Accuracyは今回使用しないのでFalseにする
-    # もしも使用したいのであれば、自分でAccuracyを評価する関数を作成する必要あり？
-    # model.compute_accuracy = False
 
     if args.gpu_id >= 0:
         # Make a specified GPU current
