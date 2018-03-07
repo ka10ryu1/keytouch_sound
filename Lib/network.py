@@ -13,11 +13,10 @@ from chainer import Chain
 
 class KBT(Chain):
     def __init__(self, n_in=1, n_unit=128, n_out=10,
-                 layer=3, actfun=F.sigmoid, dropout=1.0):
+                 actfun=F.sigmoid, dropout=0, view=False):
         """
         [in] n_unit: 中間層のユニット数
         [in] n_out:  出力チャンネル
-        [in] layer:  中間層の数
         [in] actfun: 活性化関数
         """
 
@@ -25,19 +24,38 @@ class KBT(Chain):
         with self.init_scope():
             self.l1 = L.LSTM(None, n_unit)
             self.l2 = L.LSTM(None, n_unit)
-            self.l3 = L.Linear(None, n_out)
+            self.l3 = L.LSTM(None, n_unit)
+            self.lN = L.Linear(None, n_out)
 
         self.ratio = dropout
+        self.view = view
         print('[Network info]')
-        print('  Unit:\t{0}\n  Out:\t{1}\n  Layer:\t{2}\n  Act Func:\t{3}'.format(
-            n_unit, n_out, layer, actfun.__name__
+        print('  Unit:\t{0}\n  Out:\t{1}\n  Act Func:\t{2}'.format(
+            n_unit, n_out, actfun.__name__
         ))
 
     def __call__(self, x):
         self.reset_state()
+        if self.view:
+            print(x.shape)
+
         h = F.dropout(self.l1(x), self.ratio)
+        if self.view:
+            print(h.shape)
+
         h = F.dropout(self.l2(h), self.ratio/2)
-        y = self.l3(h)
+        if self.view:
+            print(h.shape)
+
+        h = F.dropout(self.l3(h), self.ratio/3)
+        if self.view:
+            print(h.shape)
+
+        y = self.lN(h)
+        if self.view:
+            print(y.shape)
+            exit()
+
         return y
 
     def reset_state(self):

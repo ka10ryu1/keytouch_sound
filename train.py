@@ -25,31 +25,29 @@ import Tools.func as F
 def command():
     parser = argparse.ArgumentParser(description=help)
     parser.add_argument('-i', '--in_path', default='./result/',
-                        help='入力データセットのフォルダ (default: ./result/)')
-    parser.add_argument('-lf', '--lossfun', default='mse',
-                        help='損失関数 (default: mse, other: mae)')
-    parser.add_argument('-af', '--actfun', default='sigmoid',
-                        help='活性化関数 (default: sigmoid, other: relu, elu, c_relu, l_relu, h_sigmoid, tanh, s_plus)')
+                        help='入力データセットのフォルダ [default: ./result/]')
+    parser.add_argument('-u', '--unit', type=int, default=32,
+                        help='ネットワークのユニット数 [default: 32]')
+    parser.add_argument('-af', '--actfun', default='relu',
+                        help='活性化関数 [default: relu, other: elu/c_relu/l_relu/sigmoid/h_sigmoid/tanh/s_plus]')
+    parser.add_argument('-d', '--dropout', type=float, default=0.3,
+                        help='ドロップアウト率（0〜0.9、0で不使用）[default: 0.3]')
     parser.add_argument('-opt', '--optimizer', default='adam',
-                        help='オプティマイザ (default: adam, other: ada_d, ada_g, m_sgd, n_ag, rmsp, rmsp_g, sgd, smorms)')
-    parser.add_argument('-ln', '--layer_num', type=int, default=3,
-                        help='ネットワーク層の数 (default: 3)')
-    parser.add_argument('-u', '--unit', type=int, default=128,
-                        help='ネットワークのユニット数 (default: 128)')
-    parser.add_argument('-d', '--dropout', type=float, default=0.7,
-                        help='ドロップアウトの割合 (default: 0.7)')
+                        help='オプティマイザ [default: adam, other: ada_d/ada_g/m_sgd/n_ag/rmsp/rmsp_g/sgd/smorms]')
+    parser.add_argument('-lf', '--lossfun', default='mse',
+                        help='損失関数 [default: mse, other: mae, ber, gauss_kl]')
     parser.add_argument('-b', '--batchsize', type=int, default=10,
-                        help='ミニバッチサイズ (default: 10)')
+                        help='ミニバッチサイズ [default: 10]')
     parser.add_argument('-e', '--epoch', type=int, default=200,
-                        help='学習のエポック数 (default 200)')
+                        help='学習のエポック数 [default 200]')
     parser.add_argument('-f', '--frequency', type=int, default=-1,
-                        help='スナップショット周期 (default: -1)')
+                        help='スナップショット周期 [default: -1]')
     parser.add_argument('-g', '--gpu_id', type=int, default=-1,
-                        help='使用するGPUのID (default -1)')
+                        help='使用するGPUのID [default -1]')
     parser.add_argument('-o', '--out_path', default='./result/',
-                        help='生成物の保存先(default: ./result/)')
+                        help='生成物の保存先[default: ./result/]')
     parser.add_argument('-r', '--resume', default='',
-                        help='使用するスナップショットのパス(default: no use)')
+                        help='使用するスナップショットのパス[default: no use]')
     parser.add_argument('--noplot', dest='plot', action='store_false',
                         help='学習過程をPNG形式で出力しない場合に使用する')
     parser.add_argument('--only_check', action='store_true',
@@ -101,8 +99,8 @@ def main(args):
     actfun = M.getActfun(args.actfun)
     # モデルを決定する
     model = L.Classifier(
-        KBT(n_in=1, n_unit=args.unit, layer=args.layer_num,
-            actfun=actfun, dropout=args.dropout),
+        KBT(n_in=1, n_unit=args.unit, actfun=actfun,
+            dropout=args.dropout, view=args.only_check),
     )
 
     if args.gpu_id >= 0:
@@ -117,12 +115,8 @@ def main(args):
     # Load dataset
     train, test, bprop_len = getWaveData(args.in_path)
     # predict.pyでモデルを決定する際に必要なので記憶しておく
-    model_param = {
-        'unit':  args.unit,
-        'img_ch': train[0][0].shape[0],
-        'layer': args.layer_num,
-        'actfun': args.actfun,
-    }
+    model_param = {i: getattr(args, i) for i in dir(args) if not '_' in i[0]}
+    model_param['shape'] = train[0][0].shape
 
     train_iter = chainer.iterators.SerialIterator(train, args.batchsize)
     test_iter = chainer.iterators.SerialIterator(test, args.batchsize,
@@ -157,12 +151,6 @@ def main(args):
     # Save two plot images to the result dir
     if args.plot and extensions.PlotReport.available():
         trainer.extend(
-            extensions.PlotReport(
-                ['main/loss', 'validation/main/loss', 'main/accuracy', 'validation/main/accuracy'],
-                'epoch',
-                file_name=exec_time + '_plot.png')
-        )
-        trainer.extend(
             extensions.PlotReport(['main/loss', 'validation/main/loss'],
                                   'epoch', file_name='loss.png')
         )
@@ -196,7 +184,7 @@ def main(args):
     if args.only_check is False:
         # predict.pyでモデルのパラメータを読み込むjson形式で保存する
         with open(F.getFilePath(args.out_path, exec_time, '.json'), 'w') as f:
-            json.dump(model_param, f)
+            json.dump(model_param, f, indent=4, sort_keys=True)
 
     # Run the training
     trainer.run()
