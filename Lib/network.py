@@ -36,7 +36,7 @@ class KBT(Chain):
     def __call__(self, x):
         self.reset_state()
         h = F.dropout(self.l1(x), self.ratio)
-        h = F.dropout(self.l2(h), self.ratio)
+        h = F.dropout(self.l2(h), self.ratio/2)
         y = self.l3(h)
         return y
 
